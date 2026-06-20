@@ -1,0 +1,38 @@
+# This file contains metadata for your plugin.
+
+[general]
+name=Freehand Georeferencer
+qgisMinimumVersion=4.0
+description=An intuitive georeferencing (coordinate-correction) tool for vector and raster layers. Grab a point and release it at the new position to add control points, preview the Helmert/Affine transform in real time, and apply the result.
+version=20260620
+author=Sanda Takeru
+email=location.lab@sanda-takeru.com
+
+about=Align survey/CAD-derived vector data or scanned/old raster maps to known points with a direct, PowerPoint-like feel (move, rotate, scale). No numeric input is required: control points (GCPs) are added with the mouse only. For vector layers, press an old node and release at the new position; sources snap to vertices of any visible vector layer. For raster layers, press a recognizable point on the image and release at its correct map position (free-point source; the image itself has no vertices). The transformed geometry/image is previewed in real time while dragging. Per-GCP X/Y error, overall RMS, standard deviation and scale factor are shown; residuals are colored green-to-red and the list is sortable. Transforms: Helmert (fixed scale or with scale) and Affine. Apply: vector -> new memory layer, add to current layer, or in-place edit (undoable); raster -> a new georeferenced layer written as a VRT with an updated geotransform (no resampling, lossless). GCPs can be saved/loaded as CSV. Same-CRS workflow only (no reprojection): keep the layer CRS and the project CRS identical; a warning is shown when they differ.
+
+tracker=https://github.com/SandaTakeru/Freehand-Georeferencer
+repository=https://github.com/SandaTakeru/Freehand-Georeferencer
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+changelog=2026-06-20 First release (derived from Freehand Vector Georeferencer).
+    - Vector + raster support in a single plugin (shared core, per-type backends)
+    - Transforms: Helmert (fixed scale / with scale) and Affine
+    - Live preview while dragging; click an existing GCP to toggle, drag it to move its destination
+    - Vector: vertex snapping, scope single/selected/whole, new/add/edit apply
+    - Raster: free-point source, lossless apply via VRT geotransform (no resampling)
+    - Errors: X/Y error, RMS, standard deviation and scale factor; green-to-red residual gradient; sortable list
+    - GCPs: save/load as CSV
+    - Warns in the panel when the layer CRS differs from the project CRS
+
+# Tags are comma separated with spaces allowed
+tags=python,vector,raster,georeferencing,transform,helmert,affine,gcp
+
+homepage=https://github.com/SandaTakeru/Freehand-Georeferencer
+category=Plugins
+icon=icon.png
+experimental=False
+deprecated=False
+server=False
