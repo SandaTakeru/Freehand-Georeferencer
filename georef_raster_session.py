@@ -101,8 +101,12 @@ class RasterPreviewItem(QgsMapCanvasItem):
 def _render_layer_image(layer, max_dim=PREVIEW_MAX_DIM):
     '''Render the raster layer to a transparent-background QImage once.
 
-    Returns (QImage, QgsRectangle) where the rectangle is the exact extent the
-    image covers (the map settings' visible extent).
+    The image is cropped to exactly layer.extent() so the preview and the
+    output (whose geotransform is built from layer.extent()) share the identical
+    frame. The renderer pads the visible extent to the output aspect ratio, so
+    without cropping the preview would be offset by that padding.
+
+    Returns (QImage, QgsRectangle) where the rectangle is layer.extent().
     '''
     ext = layer.extent()
     w_m = ext.width()
@@ -126,7 +130,19 @@ def _render_layer_image(layer, max_dim=PREVIEW_MAX_DIM):
     job.start()
     job.waitForFinished()
     img = job.renderedImage()
-    return img, ms.visibleExtent()
+
+    # Crop the padded render down to exactly layer.extent().
+    vis = ms.visibleExtent()
+    if vis.width() > 0 and vis.height() > 0:
+        sx = img.width() / vis.width()
+        sy = img.height() / vis.height()
+        x0 = int(round((ext.xMinimum() - vis.xMinimum()) * sx))
+        y0 = int(round((vis.yMaximum() - ext.yMaximum()) * sy))
+        cw = int(round(ext.width() * sx))
+        ch = int(round(ext.height() * sy))
+        if cw > 0 and ch > 0:
+            img = img.copy(x0, y0, cw, ch)
+    return img, ext
 
 
 class RasterGeorefSession(GeorefSessionBase):
@@ -217,6 +233,14 @@ class RasterGeorefSession(GeorefSessionBase):
             ds = None
             return None
         vrt.SetGeoTransform(new_gt)
+        # Write the CRS so the output is self-describing (avoids the "CRS was
+        # undefined" warning). Use the layer CRS, or the project CRS if the
+        # source raster has none (the georeferencing is done in that CRS).
+        crs = self.layer.crs()
+        if not crs.isValid():
+            crs = QgsProject.instance().crs()
+        if crs.isValid():
+            vrt.SetProjection(crs.toWkt())
         vrt.FlushCache()
         vrt = None
         ds = None

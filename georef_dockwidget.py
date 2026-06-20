@@ -217,7 +217,8 @@ class GeorefDockWidget(QgsDockWidget):
         root = QWidget()
         layout = QVBoxLayout(root)
 
-        # Settings form (top to bottom: Transform -> Scope -> Target layer).
+        # Settings form (top to bottom: Transform -> Target layer -> Scope ->
+        # Apply as). Scope and Apply as are vector-only and grey out for raster.
         form = QFormLayout()
         # Transform mode (combo). currentData is a (mode, lock_scale) tuple.
         self.transformCombo = QComboBox()
@@ -230,6 +231,12 @@ class GeorefDockWidget(QgsDockWidget):
         self.transformCombo.setCurrentIndex(0)  # default: Helmert (fixed scale)
         form.addRow('Transform', self.transformCombo)
 
+        self.layerCombo = QgsMapLayerComboBox()
+        self.layerCombo.setFilters(
+            QgsMapLayerProxyModel.Filter.VectorLayer
+            | QgsMapLayerProxyModel.Filter.RasterLayer)
+        form.addRow('Target layer', self.layerCombo)
+
         # Scope (combo). The internal value is read via currentData. Vector only.
         self.scopeCombo = QComboBox()
         self.scopeCombo.addItem('Single feature', 'single')
@@ -237,12 +244,6 @@ class GeorefDockWidget(QgsDockWidget):
         self.scopeCombo.addItem('Whole layer', 'all')
         self.scopeCombo.setCurrentIndex(0)  # default: single feature
         form.addRow('Scope', self.scopeCombo)
-
-        self.layerCombo = QgsMapLayerComboBox()
-        self.layerCombo.setFilters(
-            QgsMapLayerProxyModel.Filter.VectorLayer
-            | QgsMapLayerProxyModel.Filter.RasterLayer)
-        form.addRow('Target layer', self.layerCombo)
 
         # Apply-method combo (vector only). Raster always generates a new layer.
         self.applyModeCombo = QComboBox()

@@ -17,15 +17,15 @@ repository=https://github.com/SandaTakeru/Freehand-Georeferencer
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=2026-06-20 First release (derived from Freehand Vector Georeferencer).
-    - Vector + raster support in a single plugin (shared core, per-type backends)
-    - Transforms: Helmert (fixed scale / with scale) and Affine
-    - Live preview while dragging; click an existing GCP to toggle, drag it to move its destination
-    - Vector: vertex snapping, scope single/selected/whole, new/add/edit apply
-    - Raster: free-point source, lossless apply via VRT geotransform (no resampling)
-    - Errors: X/Y error, RMS, standard deviation and scale factor; green-to-red residual gradient; sortable list
-    - GCPs: save/load as CSV
-    - Warns in the panel when the layer CRS differs from the project CRS
+changelog=20260620
+    - Renamed to "Freehand Georeferencer": now supports BOTH vector and raster layers.
+    - Raster georeferencing: free-point source picking, live image-overlay preview,
+      lossless apply via a VRT geotransform (no resampling). Output gets the
+      layer/project CRS written so it is self-describing.
+    - Web/tile rasters (GSI maps, XYZ/WMS/WMTS) are excluded from the target list.
+    - Internal refactor into a shared core + per-type backends; vector behavior is unchanged.
+    20260617 and earlier
+    - Vector georeferencing (see the Freehand Vector Georeferencer history).
 
 # Tags are comma separated with spaces allowed
 tags=python,vector,raster,georeferencing,transform,helmert,affine,gcp
