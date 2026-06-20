@@ -9,6 +9,13 @@ This plugin is the successor to **Freehand Vector Georeferencer** and is
 published as its next version (it adds raster support; the vector workflow is
 unchanged).
 
+## Demo
+
+![Demo](media/demo.gif)
+
+The animation above plays automatically. For the full-quality version, see the
+[demo video (MP4)](media/demo.mp4).
+
 ## Features
 
 - **Vector**: press an old node and release at the new position. Sources snap to
@@ -49,4 +56,6 @@ Georeferencer* plugin by Guilhem Vellut.
 
 ## License
 
-See [LICENSE](LICENSE).
+GNU General Public License v3.0. See [LICENSE](LICENSE).
+This plugin is derived from work originally licensed under GPL v2 or later
+(see Acknowledgment above) and is distributed under GPL v3.

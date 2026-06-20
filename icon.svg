@@ -1,6 +1,24 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <rect width="48" height="48" rx="8" fill="#1e78ff"/>
+  <defs>
+    <!-- 背景グラデーション -->
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3b93ff"/>
+      <stop offset="1" stop-color="#0b54c9"/>
+    </linearGradient>
+    <!-- 上部ハイライト -->
+    <linearGradient id="hl" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.28"/>
+      <stop offset="0.55" stop-color="#ffffff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 角丸背景＋ハイライト＋内側の縁取り -->
+  <rect width="48" height="48" rx="11" fill="url(#bg)"/>
+  <rect width="48" height="48" rx="11" fill="url(#hl)"/>
+  <rect x="1.25" y="1.25" width="45.5" height="45.5" rx="10" fill="none"
+        stroke="#ffffff" stroke-opacity="0.18" stroke-width="1.5"/>
+
   <!-- 元ジオメトリ（破線・薄色） -->
   <polygon points="9,30 19,14 30,22"
            fill="none" stroke="#bcd6ff" stroke-width="2"

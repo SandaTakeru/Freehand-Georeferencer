@@ -7,8 +7,9 @@ description=An intuitive georeferencing (coordinate-correction) tool for vector 
 version=20260620
 author=Sanda Takeru
 email=location.lab@sanda-takeru.com
+license=GPL-3.0
 
-about=Align survey/CAD-derived vector data or scanned/old raster maps to known points with a direct, PowerPoint-like feel (move, rotate, scale). No numeric input is required: control points (GCPs) are added with the mouse only. For vector layers, press an old node and release at the new position; sources snap to vertices of any visible vector layer. For raster layers, press a recognizable point on the image and release at its correct map position (free-point source; the image itself has no vertices). The transformed geometry/image is previewed in real time while dragging. Per-GCP X/Y error, overall RMS, standard deviation and scale factor are shown; residuals are colored green-to-red and the list is sortable. Transforms: Helmert (fixed scale or with scale) and Affine. Apply: vector -> new memory layer, add to current layer, or in-place edit (undoable); raster -> a new georeferenced layer written as a VRT with an updated geotransform (no resampling, lossless). GCPs can be saved/loaded as CSV. Same-CRS workflow only (no reprojection): keep the layer CRS and the project CRS identical; a warning is shown when they differ.
+about=Align survey/CAD-derived vector data or scanned/old raster maps to known points with a direct, PowerPoint-like feel (move, rotate, scale). No numeric input is required: control points (GCPs) are added with the mouse only. For vector layers, press an old node and release at the new position; sources snap to vertices of any visible vector layer. For raster layers, press a recognizable point on the image and release at its correct map position (free-point source; the image itself has no vertices). The transformed geometry/image is previewed in real time while dragging. Per-GCP X/Y error, overall RMS, standard deviation and scale factor are shown; residuals are colored green-to-red and the list is sortable. Transforms: Helmert (fixed scale or with scale) and Affine. Apply: vector -> new memory layer, add to current layer, or in-place edit (undoable); raster -> a new georeferenced layer written as a VRT with an updated geotransform (no resampling, lossless). GCPs can be saved/loaded as CSV. Same-CRS workflow only (no reprojection): keep the layer CRS and the project CRS identical; a warning is shown when they differ. Acknowledgment: the interactive UI (grab a point and move it to add control points) is inspired by the "Freehand Raster Georeferencer" plugin by Guilhem Vellut (https://github.com/gvellut/FreehandRasterGeoreferencer); licensed under GPL v2 or later, this plugin is distributed under GPL v3.
 
 tracker=https://github.com/SandaTakeru/Freehand-Georeferencer
 repository=https://github.com/SandaTakeru/Freehand-Georeferencer
@@ -24,8 +25,11 @@ changelog=20260620
       layer/project CRS written so it is self-describing.
     - Web/tile rasters (GSI maps, XYZ/WMS/WMTS) are excluded from the target list.
     - Internal refactor into a shared core + per-type backends; vector behavior is unchanged.
-    20260617 and earlier
-    - Vector georeferencing (see the Freehand Vector Georeferencer history).
+    - Carries over the toolbar ▼ "How to use (watch video)" dropdown.
+    20260617
+    - Toolbar dropdown (▼) with "How to use (watch video)"; license unified to GPL v3.
+    20260616 and earlier
+    - Vector georeferencing: Helmert/Affine, vertex snapping, scope, new/add/edit apply, GCP CSV.
 
 # Tags are comma separated with spaces allowed
 tags=python,vector,raster,georeferencing,transform,helmert,affine,gcp
