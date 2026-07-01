@@ -2,9 +2,9 @@
 
 [general]
 name=Freehand Georeferencer
-qgisMinimumVersion=4.0
+qgisMinimumVersion=3.16
 description=An intuitive georeferencing (coordinate-correction) tool for vector and raster layers. Grab a point and release it at the new position to add control points, preview the Helmert/Affine transform in real time, and apply the result.
-version=20260620
+version=20260702
 author=Sanda Takeru
 email=location.lab@sanda-takeru.com
 license=GPL-3.0
