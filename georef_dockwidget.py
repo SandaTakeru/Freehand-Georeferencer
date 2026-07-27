@@ -31,6 +31,7 @@ from qgis.PyQt.QtWidgets import (
     QTableWidgetItem,
     QVBoxLayout,
     QWidget,
+    QSlider,
 )
 
 from .georef_session_base import DEFAULT_QUALITY, QUALITY, residual_color
@@ -237,6 +238,18 @@ class GeorefDockWidget(QgsDockWidget):
             | QgsMapLayerProxyModel.Filter.RasterLayer)
         form.addRow('Target layer', self.layerCombo)
 
+        self.transparencySlider = QSlider(Qt.Horizontal)
+        self.transparencySlider.setMinimum(0)
+        self.transparencySlider.setMaximum(100)
+        self.transparencySlider.setValue(30)
+        self.transparencyLabel = QLabel('30%')
+
+        rowTrans = QHBoxLayout()
+        rowTrans.addWidget(QLabel('Preview Transparency:'))
+        rowTrans.addWidget(self.transparencySlider)
+        rowTrans.addWidget(self.transparencyLabel)
+        form.addRow(rowTrans)
+
         # Scope (combo). The internal value is read via currentData. Vector only.
         self.scopeCombo = QComboBox()
         self.scopeCombo.addItem('Single feature', 'single')
@@ -346,6 +359,7 @@ class GeorefDockWidget(QgsDockWidget):
         self._refresh_excepted_layers()
         self._update_enabled(False)
         self._on_layer_changed()
+        self.transparencySlider.valueChanged.connect(self._on_transparency_changed)
 
     # ------------------------------------------------------------------
     # Session control
@@ -408,6 +422,9 @@ class GeorefDockWidget(QgsDockWidget):
         self.maptool = GeorefMapTool(self.iface, self.session)
         self.iface.mapCanvas().setMapTool(self.maptool)
         self.session.recompute()
+        current_transparency = self.transparencySlider.value()
+        opacity = 1.0 - (current_transparency / 100.0)
+        self.session.set_preview_opacity(opacity)
         self.primaryBtn.setText('Apply')
         self._update_enabled(True)
         self._lock_setup_widgets(True)
@@ -649,3 +666,9 @@ class GeorefDockWidget(QgsDockWidget):
     def closeEvent(self, event):
         self._stop_session()
         super().closeEvent(event)
+
+    def _on_transparency_changed(self, value):
+        self.transparencyLabel.setText(f'{value}%')
+        if self.session is not None:
+            opacity = 1.0 - (value / 100.0)
+            self.session.set_preview_opacity(opacity)

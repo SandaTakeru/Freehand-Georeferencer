@@ -561,3 +561,6 @@ class GeorefSessionBase(object):
         self.canvas.scene().removeItem(self.rb_residual)
         self._restore_source_layer()
         self.canvas.refresh()
+
+    def set_preview_opacity(self, opacity):
+        pass

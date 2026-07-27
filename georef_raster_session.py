@@ -44,9 +44,10 @@ class RasterPreviewItem(QgsMapCanvasItem):
     def __init__(self, canvas, image, extent):
         super().__init__(canvas)
         self._canvas = canvas
-        self._image = image          # QImage in source space
-        self._extent = extent        # QgsRectangle, source extent of the image
+        self._image = image
+        self._extent = extent
         self._matrix = transform._identity()
+        self._opacity = PREVIEW_OPACITY
 
     def set_matrix(self, matrix):
         self._matrix = matrix
@@ -91,11 +92,15 @@ class RasterPreviewItem(QgsMapCanvasItem):
         if not QTransform.quadToQuad(src_poly, dst_poly, t):
             return
         painter.save()
-        painter.setOpacity(PREVIEW_OPACITY)
+        painter.setOpacity(self._opacity)
         painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
         painter.setTransform(t, True)
         painter.drawImage(0, 0, self._image)
         painter.restore()
+
+    def set_opacity(self, opacity):
+        self._opacity = opacity
+        self.update()
 
 
 def _render_layer_image(layer, max_dim=PREVIEW_MAX_DIM):
@@ -276,3 +281,7 @@ class RasterGeorefSession(GeorefSessionBase):
             self.canvas.scene().removeItem(self.preview_item)
             self.preview_item = None
         super().cleanup()
+
+    def set_preview_opacity(self, opacity):
+        if self.preview_item is not None:
+            self.preview_item.set_opacity(opacity)
