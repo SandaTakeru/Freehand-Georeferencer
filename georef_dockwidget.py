@@ -34,6 +34,8 @@ from qgis.PyQt.QtWidgets import (
     QSlider,
 )
 
+QtHorizontal = getattr(Qt, 'Horizontal', Qt.Orientation.Horizontal)
+
 from .georef_session_base import DEFAULT_QUALITY, QUALITY, residual_color
 from .georef_vector_session import VectorGeorefSession
 from .georef_raster_session import RasterGeorefSession
@@ -123,6 +125,8 @@ class GeorefDockWidget(QgsDockWidget):
         raster = self._is_raster()
         self.scopeCombo.setEnabled(not raster)
         self.applyModeCombo.setEnabled(not raster)
+        self.transparencySlider.setEnabled(raster)
+        self.transparencyLabel.setEnabled(raster)
         if raster:
             self.applyModeCombo.setCurrentIndex(0)  # generate new layer
 
@@ -238,7 +242,7 @@ class GeorefDockWidget(QgsDockWidget):
             | QgsMapLayerProxyModel.Filter.RasterLayer)
         form.addRow('Target layer', self.layerCombo)
 
-        self.transparencySlider = QSlider(Qt.Horizontal)
+        self.transparencySlider = QSlider(QtHorizontal)
         self.transparencySlider.setMinimum(0)
         self.transparencySlider.setMaximum(100)
         self.transparencySlider.setValue(30)
