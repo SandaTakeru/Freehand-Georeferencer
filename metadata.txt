@@ -2,9 +2,9 @@
 
 [general]
 name=Freehand Georeferencer
-qgisMinimumVersion=3.16
+qgisMinimumVersion=4.0
 description=An intuitive georeferencing (coordinate-correction) tool for vector and raster layers. Grab a point and release it at the new position to add control points, preview the Helmert/Affine transform in real time, and apply the result.
-version=20260702
+version=20260806.4
 author=Sanda Takeru
 email=location.lab@sanda-takeru.com
 license=GPL-3.0
@@ -18,7 +18,10 @@ repository=https://github.com/SandaTakeru/Freehand-Georeferencer
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=20260620
+changelog=20260806
+    - Add transparency slider for raster layer. "Thanks to MrChebur"
+    - Made the preview transparency control active only for raster target layers.
+    20260620
     - Renamed to "Freehand Georeferencer": now supports BOTH vector and raster layers.
     - Raster georeferencing: free-point source picking, live image-overlay preview,
       lossless apply via a VRT geotransform (no resampling). Output gets the
@@ -34,7 +37,7 @@ changelog=20260620
 # Tags are comma separated with spaces allowed
 tags=python,vector,raster,georeferencing,transform,helmert,affine,gcp
 
-homepage=https://github.com/SandaTakeru/Freehand-Georeferencer
+homepage=https://note.com/sandatakeru/n/n654543a913d8
 category=Plugins
 icon=icon.png
 experimental=False
