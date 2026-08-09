@@ -125,8 +125,8 @@ class GeorefDockWidget(QgsDockWidget):
         raster = self._is_raster()
         self.scopeCombo.setEnabled(not raster)
         self.applyModeCombo.setEnabled(not raster)
-        self.transparencySlider.setEnabled(raster)
-        self.transparencyLabel.setEnabled(raster)
+        self.transparencySlider.setEnabled(True)
+        self.transparencyLabel.setEnabled(True)
         if raster:
             self.applyModeCombo.setCurrentIndex(0)  # generate new layer
 
@@ -245,14 +245,8 @@ class GeorefDockWidget(QgsDockWidget):
         self.transparencySlider = QSlider(QtHorizontal)
         self.transparencySlider.setMinimum(0)
         self.transparencySlider.setMaximum(100)
-        self.transparencySlider.setValue(30)
-        self.transparencyLabel = QLabel('30%')
-
-        rowTrans = QHBoxLayout()
-        rowTrans.addWidget(QLabel('Preview Transparency:'))
-        rowTrans.addWidget(self.transparencySlider)
-        rowTrans.addWidget(self.transparencyLabel)
-        form.addRow(rowTrans)
+        self.transparencySlider.setValue(50)
+        self.transparencyLabel = QLabel('50%')
 
         # Scope (combo). The internal value is read via currentData. Vector only.
         self.scopeCombo = QComboBox()
@@ -318,6 +312,13 @@ class GeorefDockWidget(QgsDockWidget):
         self.qualityCombo.addItems(list(QUALITY.keys()))
         self.qualityCombo.setCurrentText(DEFAULT_QUALITY)
         formQuality.addRow('Preview quality', self.qualityCombo)
+
+        rowTrans = QHBoxLayout()
+        rowTrans.addWidget(QLabel('Preview Transparency:'))
+        rowTrans.addWidget(self.transparencySlider)
+        rowTrans.addWidget(self.transparencyLabel)
+        formQuality.addRow(rowTrans)
+
         layout.addLayout(formQuality)
 
         # Error summary.

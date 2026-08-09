@@ -46,14 +46,18 @@ class VectorGeorefSession(GeorefSessionBase):
 
         # Rubber band for the preview.
         self.rb_preview = QgsRubberBand(self.canvas, self._geom_type)
-        self.rb_preview.setColor(QColor(30, 120, 255, 180))
-        self.rb_preview.setFillColor(QColor(30, 120, 255, 40))
+        self._preview_color = QColor(30, 120, 255, 255)
+        self._preview_fill_color = QColor(30, 120, 255, 255)
+        self.rb_preview.setColor(self._preview_color)
+        self.rb_preview.setFillColor(self._preview_fill_color)
         self.rb_preview.setWidth(2)
         # Static preview that keeps the non-target features at their original
         # position in single-feature mode.
         self.rb_static = QgsRubberBand(self.canvas, self._geom_type)
-        self.rb_static.setColor(QColor(120, 120, 120, 160))
-        self.rb_static.setFillColor(QColor(120, 120, 120, 30))
+        self._static_color = QColor(120, 120, 120, 160)
+        self._static_fill_color = QColor(120, 120, 120, 30)
+        self.rb_static.setColor(self._static_color)
+        self.rb_static.setFillColor(self._static_fill_color)
         self.rb_static.setWidth(1)
 
         self._build_scope()
@@ -367,3 +371,16 @@ class VectorGeorefSession(GeorefSessionBase):
         self.canvas.scene().removeItem(self.rb_preview)
         self.canvas.scene().removeItem(self.rb_static)
         super().cleanup()
+
+    def set_preview_opacity(self, opacity):
+        def scaled(color):
+            return QColor(
+                color.red(),
+                color.green(),
+                color.blue(),
+                int(round(255 * opacity)),
+            )
+
+        self.rb_preview.setColor(scaled(self._preview_color))
+        self.rb_preview.setFillColor(scaled(self._preview_fill_color))
+        self.canvas.refresh()

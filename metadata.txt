@@ -4,7 +4,7 @@
 name=Freehand Georeferencer
 qgisMinimumVersion=4.0
 description=An intuitive georeferencing (coordinate-correction) tool for vector and raster layers. Grab a point and release it at the new position to add control points, preview the Helmert/Affine transform in real time, and apply the result.
-version=20260806.4
+version=20260810.4
 author=Sanda Takeru
 email=location.lab@sanda-takeru.com
 license=GPL-3.0
@@ -18,7 +18,9 @@ repository=https://github.com/SandaTakeru/Freehand-Georeferencer
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=20260806
+changelog=20260810
+    - UIの調整、残差の赤色線を手前に表示。透明度の初期値を50％に設定。同名VRT存在時の名前衝突を回避。
+    20260806
     - Add transparency slider for raster layer. "Thanks to MrChebur"
     - Made the preview transparency control active only for raster target layers.
     20260620

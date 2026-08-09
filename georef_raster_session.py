@@ -250,7 +250,7 @@ class RasterGeorefSession(GeorefSessionBase):
         vrt = None
         ds = None
 
-        out_name = '{}_{}'.format(self.layer.name(), self.transform_label())
+        out_name = os.path.splitext(os.path.basename(out_path))[0]
         rl = QgsRasterLayer(out_path, out_name)
         if not rl.isValid():
             return None
@@ -270,8 +270,18 @@ class RasterGeorefSession(GeorefSessionBase):
         fname = '{}_{}.vrt'.format(base, self.transform_label())
         src_dir = os.path.dirname(src_path)
         if src_dir and os.access(src_dir, os.W_OK):
-            return os.path.join(src_dir, fname)
-        return os.path.join(tempfile.gettempdir(), fname)
+            return self._unique_output_path(src_dir, fname)
+        return self._unique_output_path(tempfile.gettempdir(), fname)
+
+    def _unique_output_path(self, dest_dir, filename):
+        '''Return a path that does not overwrite an existing file by adding a numeric suffix.'''
+        base, ext = os.path.splitext(filename)
+        candidate = os.path.join(dest_dir, filename)
+        index = 1
+        while os.path.exists(candidate):
+            candidate = os.path.join(dest_dir, f'{base}_{index}{ext}')
+            index += 1
+        return candidate
 
     # ------------------------------------------------------------------
     # Teardown
@@ -285,3 +295,4 @@ class RasterGeorefSession(GeorefSessionBase):
     def set_preview_opacity(self, opacity):
         if self.preview_item is not None:
             self.preview_item.set_opacity(opacity)
+            self.canvas.refresh()

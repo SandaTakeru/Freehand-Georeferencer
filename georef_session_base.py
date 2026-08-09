@@ -108,6 +108,7 @@ class GeorefSessionBase(object):
         self.rb_residual = QgsRubberBand(self.canvas, Qgis.GeometryType.Line)
         self.rb_residual.setColor(QColor(255, 0, 0, 200))
         self.rb_residual.setWidth(1)
+        self.rb_residual.setZValue(1000)
 
         self.markers = []             # one QgsVertexMarker per GCP
 
