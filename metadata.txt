@@ -4,12 +4,12 @@
 name=Freehand Georeferencer
 qgisMinimumVersion=4.0
 description=An intuitive georeferencing (coordinate-correction) tool for vector and raster layers. Grab a point and release it at the new position to add control points, preview the Helmert/Affine transform in real time, and apply the result.
-version=20260810.4
+version=20260905.2
 author=Sanda Takeru
 email=location.lab@sanda-takeru.com
 license=GPL-3.0
 
-about=Align survey/CAD-derived vector data or scanned/old raster maps to known points with a direct, PowerPoint-like feel (move, rotate, scale). No numeric input is required: control points (GCPs) are added with the mouse only. For vector layers, press an old node and release at the new position; sources snap to vertices of any visible vector layer. For raster layers, press a recognizable point on the image and release at its correct map position (free-point source; the image itself has no vertices). The transformed geometry/image is previewed in real time while dragging. Per-GCP X/Y error, overall RMS, standard deviation and scale factor are shown; residuals are colored green-to-red and the list is sortable. Transforms: Helmert (fixed scale or with scale) and Affine. Apply: vector -> new memory layer, add to current layer, or in-place edit (undoable); raster -> a new georeferenced layer written as a VRT with an updated geotransform (no resampling, lossless). GCPs can be saved/loaded as CSV. Same-CRS workflow only (no reprojection): keep the layer CRS and the project CRS identical; a warning is shown when they differ. Acknowledgment: the interactive UI (grab a point and move it to add control points) is inspired by the "Freehand Raster Georeferencer" plugin by Guilhem Vellut (https://github.com/gvellut/FreehandRasterGeoreferencer); licensed under GPL v2 or later, this plugin is distributed under GPL v3.
+about=Align survey/CAD-derived vector data or scanned/old raster maps to known points with a direct, PowerPoint-like feel (move, rotate, scale). No numeric input is required: control points (GCPs) are added with the mouse only. For vector layers, press an old node and release at the new position; sources snap to vertices of any visible vector layer. For raster layers, press a recognizable point on the image and release at its correct map position (free-point source; the image itself has no vertices). When a raster has no GCPs yet, a one-click helper adds a first GCP from the raster center to the map canvas center to reduce long-distance panning. The transformed geometry/image is previewed in real time while dragging. Per-GCP X/Y error, overall RMS, standard deviation and scale factor are shown; residuals are colored green-to-red and the list is sortable. Transforms: Helmert (fixed scale or with scale) and Affine. Apply: vector -> new memory layer, add to current layer, or in-place edit (undoable); raster -> a new georeferenced layer written as a VRT with an updated geotransform (no resampling, lossless). Raster snapping now supports the full 3x3 frame grid on the source raster and on other visible raster layers, and nested VRT-to-VRT georeferencing keeps prior rotation/shear/scale edits aligned with the preview. GCPs can be saved/loaded as CSV. Same-CRS workflow only (no reprojection): keep the layer CRS and the project CRS identical; a warning is shown when they differ. Acknowledgment: the interactive UI (grab a point and move it to add control points) is inspired by the "Freehand Raster Georeferencer" plugin by Guilhem Vellut (https://github.com/gvellut/FreehandRasterGeoreferencer); licensed under GPL v2 or later, this plugin is distributed under GPL v3.
 
 tracker=https://github.com/SandaTakeru/Freehand-Georeferencer
 repository=https://github.com/SandaTakeru/Freehand-Georeferencer
@@ -18,8 +18,16 @@ repository=https://github.com/SandaTakeru/Freehand-Georeferencer
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=20260810
-    - UIの調整、残差の赤色線を手前に表示。透明度の初期値を50％に設定。同名VRT存在時の名前衝突を回避。
+changelog=20260905
+    - Added a raster-only help action for the zero-GCP case: click the primary button to add a first GCP from the raster center to the map canvas center, making initial alignment easier when the raster is far from the map origin.
+    - Fixed the primary button state so it returns to "Apply" as soon as the raster has one or more GCPs, whether they were added manually or via the helper.
+    - Fixed add-to-current-layer vector output so newly created features do not copy a source `fid` value into the target layer. This avoids save-time conflicts when the target layer has a fid/identifier field and prevents errors during layer write-back.
+    - Fixed raster georeferencing for nested VRT-to-VRT workflows: prior rotation/shear/scale edits are preserved and remain aligned with the preview.
+    - Fixed upside-down output on plain raster images by selecting the correct base geotransform when raw images are transformed.
+    - Restored raster snapping using the full 3x3 image frame (corners, edge midpoints, and center) for both the source raster and other visible raster layers.
+    - Improved consistency between preview transform and applied output transform for georeferenced raster frames.
+    20260810
+    - UI refinements, residual red guide lines displayed in front, initial transparency set to 50%, and duplicate output names avoided when a VRT with the same name already exists.
     20260806
     - Add transparency slider for raster layer. "Thanks to MrChebur"
     - Made the preview transparency control active only for raster target layers.

@@ -165,6 +165,93 @@ class RasterGeorefSession(GeorefSessionBase):
     def total_vertices(self):
         return 0
 
+    def _source_frame_points(self):
+        '''Return the 3x3 raster-frame points in the raster's source plane.
+
+        This is the same source frame used by the preview overlay: the image is
+        treated as a rectangular quad spanning `layer.extent()`, not the raw pixel
+        grid. Using raw pixel coordinates here is wrong for previewed/rotated VRTs
+        because their transform is defined in source-space map coordinates, not in
+        the unprojected image pixel grid.
+        '''
+        if self.layer is None:
+            return []
+        ext = self.layer.extent()
+        if not ext.isValid() or ext.width() <= 0 or ext.height() <= 0:
+            return []
+        xs = [ext.xMinimum(), ext.xMinimum() + ext.width() / 2.0, ext.xMaximum()]
+        ys = [ext.yMaximum(), ext.yMaximum() - ext.height() / 2.0, ext.yMinimum()]
+        return [(x, y) for y in ys for x in xs]
+
+    def _map_frame_points(self, layer):
+        '''Return the 3x3 raster frame points in map coordinates.'''
+        if layer is None:
+            return []
+        ext = layer.extent()
+        if not ext.isValid() or ext.width() <= 0 or ext.height() <= 0:
+            return []
+        xs = [ext.xMinimum(), ext.xMinimum() + ext.width() / 2.0, ext.xMaximum()]
+        ys = [ext.yMaximum(), ext.yMaximum() - ext.height() / 2.0, ext.yMinimum()]
+        return [(x, y) for y in ys for x in xs]
+
+    def snap_source(self, map_point, tol_map) -> tuple[float, float] | None:
+        '''Snap to the currently previewed raster frame in the source plane.
+
+        The source points belong to the raster's own frame, not to the map frame.
+        We therefore evaluate the 3x3 frame corners/midpoints in the source plane
+        defined by layer.extent(), then project them through the current preview
+        transform to compare against the cursor. This keeps the snap points aligned
+        with the rendered raster and avoids the inversion/jitter seen when using
+        raw pixel coordinates on transformed VRTs.
+        '''
+        best = None
+        best_d = tol_map
+        for src in self._source_frame_points():
+            pt = self.preview_pos(src)
+            d = ((pt.x() - map_point.x()) ** 2 + (pt.y() - map_point.y()) ** 2) ** 0.5
+            if d <= best_d:
+                best_d = d
+                best = src
+        return best
+
+    def _nearest_raster_frame_point(self, map_point, tol_map, include_self=False):
+        '''Nearest point on the frame of any visible raster layer in map coordinates.'''
+        layers = list(self.canvas.layers())
+        if include_self and isinstance(self.layer, QgsRasterLayer) and self.layer not in layers:
+            layers.append(self.layer)
+
+        best = None
+        best_d = tol_map
+        seen = set()
+        for lyr in layers:
+            if not isinstance(lyr, QgsRasterLayer) or lyr.id() in seen:
+                continue
+            seen.add(lyr.id())
+            if not include_self and lyr.id() == self.layer.id():
+                continue
+            if lyr.crs() != self.layer.crs():
+                continue
+            for x, y in self._map_frame_points(lyr):
+                d = ((x - map_point.x()) ** 2 + (y - map_point.y()) ** 2) ** 0.5
+                if d <= best_d:
+                    best_d = d
+                    best = (x, y)
+        return best
+
+    def snap_dest(self, map_point, tol_map):
+        '''Destination snap: nearest vector vertex or raster frame point.'''
+        best = self._nearest_layer_vertex(map_point, tol_map, include_self=True)
+        if best is not None:
+            return best
+        return self._nearest_raster_frame_point(map_point, tol_map, include_self=True)
+
+    def snap_source_other(self, map_point, tol_map):
+        '''Source snap from other visible layers, including other rasters.'''
+        best = self._nearest_layer_vertex(map_point, tol_map, include_self=False)
+        if best is not None:
+            return best
+        return self._nearest_raster_frame_point(map_point, tol_map, include_self=False)
+
     # ------------------------------------------------------------------
     # Preview
     # ------------------------------------------------------------------
@@ -203,26 +290,39 @@ class RasterGeorefSession(GeorefSessionBase):
         ds = gdal.Open(path)
         if ds is None:
             return None
-        # Base geotransform from the layer's displayed extent (north-up), NOT the
-        # raw file geotransform. An ungeoreferenced raster stores a positive n-s
-        # pixel size (gt[5] > 0), while QGIS displays it north-up — the same
-        # basis the preview uses. Composing with the raw gt would flip the
-        # output north-south. For a properly north-up raster this equals the
-        # file gt, so there is no change.
-        cols = self.layer.width()
-        rows = self.layer.height()
-        if cols <= 0 or rows <= 0:
-            ds = None
-            return None
-        ext = self.layer.extent()
-        g = (
-            ext.xMinimum(), ext.width() / cols, 0.0,
-            ext.yMaximum(), 0.0, -ext.height() / rows,
+        # Use the source dataset's genuine GDAL geotransform only when it is an
+        # actual georeferenced raster/VRT (including the north-up VRT output from
+        # a previous pass). A plain unreferenced image usually has a synthetic
+        # default geotransform with a positive Y pixel size, which would cause
+        # the output to appear upside-down. In that case, fall back to the layer's
+        # currently displayed north-up extent, which matches the preview math.
+        gt = ds.GetGeoTransform()
+        is_vrt = bool(ds.GetDriver() and ds.GetDriver().ShortName.lower() == 'vrt')
+        is_valid_gt = (
+            gt is not None and len(gt) == 6 and gt[5] < 0
         )
+        if is_vrt and gt is not None:
+            g = gt
+        elif is_valid_gt:
+            g = gt
+        else:
+            cols = self.layer.width()
+            rows = self.layer.height()
+            if cols <= 0 or rows <= 0:
+                ds = None
+                return None
+            ext = self.layer.extent()
+            g = (
+                ext.xMinimum(), ext.width() / cols, 0.0,
+                ext.yMaximum(), 0.0, -ext.height() / rows,
+            )
+        assert g is not None
+        # Compose M (world->world') with the base pixel->world transform. This
+        # keeps both the current preview space and any already-applied VRT
+        # georeferencing consistent.
         m = self.matrix
         m00, m01, m02 = float(m[0, 0]), float(m[0, 1]), float(m[0, 2])
         m10, m11, m12 = float(m[1, 0]), float(m[1, 1]), float(m[1, 2])
-        # Compose M (world->world') with the geotransform (pixel->world).
         new_gt = (
             m00 * g[0] + m01 * g[3] + m02,
             m00 * g[1] + m01 * g[4],

@@ -143,7 +143,7 @@ class GeorefSessionBase(object):
     def total_vertices(self):
         return 0
 
-    def snap_source(self, map_point, tol_map):
+    def snap_source(self, map_point, tol_map) -> tuple[float, float] | None:
         '''Source snap onto the target itself. None by default (e.g. raster has
         no vertices); vector overrides this.'''
         return None
@@ -283,7 +283,8 @@ class GeorefSessionBase(object):
 
     def preview_pos(self, src):
         '''Return the current preview position of the source coordinate src.'''
-        p = transform.apply_matrix(self.matrix, [src])[0]
+        M = self._draw_matrix if self._dragging else self.matrix
+        p = transform.apply_matrix(M, [src])[0]
         return QgsPointXY(p[0], p[1])
 
     def _request_preview(self):

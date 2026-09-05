@@ -100,6 +100,43 @@ class GeorefDockWidget(QgsDockWidget):
     def _is_raster(self):
         return isinstance(self.layerCombo.currentLayer(), QgsRasterLayer)
 
+    def _primary_button_state(self):
+        '''Set the primary button label and enable state for the current session.'''
+        if self.session is None:
+            self.primaryBtn.setText('Start')
+            self.primaryBtn.setEnabled(self._can_start())
+            return
+
+        if isinstance(self.session, RasterGeorefSession) and not self.session.gcps:
+            self.primaryBtn.setText('Add GCP at map center')
+            self.primaryBtn.setEnabled(True)
+            return
+
+        self.primaryBtn.setText('Apply')
+        active = sum(1 for g in self.session.gcps if g.active)
+        self.primaryBtn.setEnabled(active > 0)
+
+    def _add_center_gcp_for_raster(self):
+        '''Add a provisional first GCP from the raster centre to the map centre.'''
+        if self.session is None or not isinstance(self.session, RasterGeorefSession):
+            return
+        if self.session.gcps:
+            return
+        ext = self.session.layer.extent()
+        if not ext.isValid() or ext.width() <= 0 or ext.height() <= 0:
+            return
+        center_map = self.iface.mapCanvas().extent().center()
+        src = (
+            ext.xMinimum() + ext.width() / 2.0,
+            ext.yMaximum() - ext.height() / 2.0,
+        )
+        dest = (center_map.x(), center_map.y())
+        self.session.add_gcp(src, dest)
+        self.hint.setText(
+            'A provisional GCP was added from the raster centre to the map centre. '
+            'Add more control points or apply the transform.')
+        self._primary_button_state()
+
     def _refresh_excepted_layers(self, *args):
         # Exclude raster layers that are not local GDAL files (e.g. 地理院地図 /
         # XYZ / WMS / WMTS). They are already georeferenced and have no writable
@@ -380,6 +417,8 @@ class GeorefDockWidget(QgsDockWidget):
         # Idle: Start (begin a session). Running: Apply.
         if self.session is None:
             self._start_session()
+        elif isinstance(self.session, RasterGeorefSession) and not self.session.gcps:
+            self._add_center_gcp_for_raster()
         else:
             self._on_apply()
 
@@ -430,13 +469,18 @@ class GeorefDockWidget(QgsDockWidget):
         current_transparency = self.transparencySlider.value()
         opacity = 1.0 - (current_transparency / 100.0)
         self.session.set_preview_opacity(opacity)
-        self.primaryBtn.setText('Apply')
+        self._primary_button_state()
         self._update_enabled(True)
         self._lock_setup_widgets(True)
         if isinstance(layer, QgsRasterLayer):
-            self.hint.setText(
-                'Press a recognizable point on the image and release at its '
-                'correct map position to add control points.')
+            if not self.session.gcps:
+                self.hint.setText(
+                    'The raster is still unreferenced. Click the primary button to '
+                    'add a first GCP from the raster centre to the map centre.')
+            else:
+                self.hint.setText(
+                    'Press a recognizable point on the image and release at its '
+                    'correct map position to add control points.')
         elif self._current_scope() == 'single':
             self.hint.setText(
                 'The feature of the first grabbed node becomes the target. '
@@ -457,7 +501,7 @@ class GeorefDockWidget(QgsDockWidget):
             self._last_session = self.session if self.session.gcps else None
             self.session.cleanup()
             self.session = None
-        self.primaryBtn.setText('Start')
+        self._primary_button_state()
         # When idle, Start is enabled only when starting is possible.
         self._update_idle_primary()
         # Keep the GCP list/stats until the next Start (so they can be reviewed
@@ -662,10 +706,7 @@ class GeorefDockWidget(QgsDockWidget):
         self.statLabel.setText(
             'RMS: {:.3f}   Std dev: {:.3f}   Scale: ×{:.4f}'.format(
                 data['rms'], data['std'], data.get('scale', 1.0)))
-        # During a session, Apply is enabled only when at least one GCP is active.
-        if self.session is not None:
-            active = sum(1 for r in rows if r['active'])
-            self.primaryBtn.setEnabled(active > 0)
+        self._primary_button_state()
         self._syncing = False
 
     def closeEvent(self, event):
