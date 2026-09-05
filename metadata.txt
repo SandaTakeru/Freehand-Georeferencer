@@ -27,7 +27,7 @@ changelog=20260905
     - Restored raster snapping using the full 3x3 image frame (corners, edge midpoints, and center) for both the source raster and other visible raster layers.
     - Improved consistency between preview transform and applied output transform for georeferenced raster frames.
     20260810
-    - UI refinements, residual red guide lines displayed in front, initial transparency set to 50%, and duplicate output names avoided when a VRT with the same name already exists.
+    - UI refinements, residual red guide lines displayed in front, initial transparency set to 50%%, and duplicate output names avoided when a VRT with the same name already exists.
     20260806
     - Add transparency slider for raster layer. "Thanks to MrChebur"
     - Made the preview transparency control active only for raster target layers.
