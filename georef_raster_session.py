@@ -316,7 +316,8 @@ class RasterGeorefSession(GeorefSessionBase):
                 ext.xMinimum(), ext.width() / cols, 0.0,
                 ext.yMaximum(), 0.0, -ext.height() / rows,
             )
-        assert g is not None
+        if g is None:
+            return None
         # Compose M (world->world') with the base pixel->world transform. This
         # keeps both the current preview space and any already-applied VRT
         # georeferencing consistent.
