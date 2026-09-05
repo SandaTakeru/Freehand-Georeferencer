@@ -96,6 +96,23 @@ class VectorGeorefSession(GeorefSessionBase):
 
         self._rebuild_anchors()
 
+    def _clone_attributes(self, source_feature, target_fields):
+        '''Return attributes safe for insertion into a target layer.
+
+        Some layers use an attribute named "fid" as a row/identifier field. When
+        copy-inserting features into the same layer, reusing that value causes
+        save-time conflicts with the provider's own feature ID handling. Clear
+        it so the target layer can assign a valid new fid automatically.
+        '''
+        attrs = list(source_feature.attributes())
+        safe = []
+        for i, field in enumerate(target_fields):
+            value = attrs[i] if i < len(attrs) else None
+            if field.name().lower() == 'fid':
+                value = None
+            safe.append(value)
+        return safe
+
     def _rebuild_anchors(self):
         '''Rebuilds the snapping anchors (vertices and feature ids) from
         the current _features.'''
@@ -283,7 +300,7 @@ class VectorGeorefSession(GeorefSessionBase):
             gg = QgsGeometry(g)
             gg.transform(t)
             nf = QgsFeature(out.fields())
-            nf.setAttributes(f.attributes())
+            nf.setAttributes(self._clone_attributes(f, out.fields()))
             nf.setGeometry(gg)
             new_feats.append(nf)
         dp.addFeatures(new_feats)
@@ -326,7 +343,7 @@ class VectorGeorefSession(GeorefSessionBase):
             gg = QgsGeometry(g)
             gg.transform(t)
             nf = QgsFeature(self.layer.fields())
-            nf.setAttributes(f.attributes())
+            nf.setAttributes(self._clone_attributes(f, self.layer.fields()))
             nf.setGeometry(gg)
             feats.append(nf)
         self.layer.beginEditCommand('Freehand Georeferencer: add')
