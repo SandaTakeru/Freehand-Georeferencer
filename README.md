@@ -12,6 +12,11 @@ This plugin is the successor to the older Freehand Vector Georeferencer workflow
 
 The animation above plays automatically. For the full-quality version, see the [demo video (MP4)](media/demo.mp4).
 
+
+![Demo2](media/demo2.gif)
+
+The animation above plays automatically. For the full-quality version, see the [demo video (MP4)](media/demo2.mp4).
+
 ## Features
 
 - Vector target layers
