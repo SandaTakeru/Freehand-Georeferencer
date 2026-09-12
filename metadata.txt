@@ -2,9 +2,10 @@
 
 [general]
 name=Freehand Georeferencer
-qgisMinimumVersion=4.0
+qgisMinimumVersion=3.0
+qgisMaximumVersion=4.99
 description=An intuitive georeferencing (coordinate-correction) tool for vector and raster layers. Grab a point and release it at the new position to add control points, preview the Helmert/Affine transform in real time, and apply the result.
-version=20260905.3
+version=20260913.2
 author=Sanda Takeru
 email=location.lab@sanda-takeru.com
 license=GPL-3.0
@@ -18,7 +19,11 @@ repository=https://github.com/SandaTakeru/Freehand-Georeferencer
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=20260905
+changelog=20260913
+  - Keep source vector features visible during live preview; preview overlays are drawn on top (do not auto-hide source layer).
+  - Added QGIS 3.x / QGIS 4.x compatibility aliases for message-level and vertex-marker enums so the same plugin code runs on both series without source changes.
+  - Added explicit plugin compatibility metadata so QGIS does not incorrectly treat the plugin as valid only up to 3.99.
+    20260905
     - Added a raster-only help action for the zero-GCP case: click the primary button to add a first GCP from the raster center to the map canvas center, making initial alignment easier when the raster is far from the map origin.
     - Fixed the primary button state so it returns to "Apply" as soon as the raster has one or more GCPs, whether they were added manually or via the helper.
     - Replaced assert statement with explicit error checking in raster georeferencing to ensure proper behavior in optimized Python bytecode.

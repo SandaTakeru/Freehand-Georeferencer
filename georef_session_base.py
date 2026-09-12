@@ -25,6 +25,10 @@ from qgis.gui import QgsRubberBand, QgsVertexMarker
 from qgis.PyQt.QtCore import QTimer
 from qgis.PyQt.QtGui import QColor
 
+QGIS_VERTEX_MARKER_ICON_TYPE = getattr(QgsVertexMarker, 'IconType', QgsVertexMarker)
+QGIS_ICON_CROSS = getattr(QGIS_VERTEX_MARKER_ICON_TYPE, 'ICON_CROSS', QgsVertexMarker.ICON_CROSS)
+QGIS_ICON_X = getattr(QGIS_VERTEX_MARKER_ICON_TYPE, 'ICON_X', QgsVertexMarker.ICON_X)
+
 from . import transform
 
 
@@ -325,10 +329,10 @@ class GeorefSessionBase(object):
             m.setIconSize(14)
             m.setPenWidth(3)
             if g.active:
-                m.setIconType(QgsVertexMarker.ICON_CROSS)
+                m.setIconType(QGIS_ICON_CROSS)
                 m.setColor(residual_color(mag_by_gcp.get(i, 0.0), max_mag))
             else:
-                m.setIconType(QgsVertexMarker.ICON_X)
+                m.setIconType(QGIS_ICON_X)
                 m.setColor(QColor(150, 150, 150))
             self.markers.append(m)
 
@@ -481,17 +485,19 @@ class GeorefSessionBase(object):
         node = QgsProject.instance().layerTreeRoot().findLayer(self.layer.id())
         if node:
             self._layer_was_visible = node.itemVisibilityChecked()
-            node.setItemVisibilityChecked(False)
-        self._layer_hidden = True
+            # Do not change the layer tree visibility here. Previously the
+            # source layer was hidden to avoid double-drawing (original vs
+            # preview). User preference is to keep original features visible
+            # while showing the preview, so keep visibility unchanged.
+        self._layer_hidden = False
         self._refresh_static()
-        # Re-render the map so the hidden layer disappears (the preview overlay
-        # is a scene item and survives the refresh).
+        # Re-render the map so the preview rubber band updates.
         self.canvas.refresh()
 
     def _restore_source_layer(self):
-        node = QgsProject.instance().layerTreeRoot().findLayer(self.layer.id())
-        if node:
-            node.setItemVisibilityChecked(self._layer_was_visible)
+        # No-op for layer-tree visibility: we never hide the source layer,
+        # so there is nothing to restore. Keep the internal flag consistent
+        # and refresh overlays.
         self._layer_hidden = False
         self._refresh_static()
         self.canvas.refresh()

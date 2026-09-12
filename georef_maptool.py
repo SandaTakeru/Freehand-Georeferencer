@@ -21,6 +21,10 @@ from qgis.core import Qgis, QgsPointXY
 from qgis.gui import QgsMapTool, QgsRubberBand, QgsVertexMarker
 from qgis.PyQt.QtGui import QColor
 
+QGIS_VERTEX_MARKER_ICON_TYPE = getattr(QgsVertexMarker, 'IconType', QgsVertexMarker)
+QGIS_ICON_CIRCLE = getattr(QGIS_VERTEX_MARKER_ICON_TYPE, 'ICON_CIRCLE', QgsVertexMarker.ICON_CIRCLE)
+QGIS_ICON_BOX = getattr(QGIS_VERTEX_MARKER_ICON_TYPE, 'ICON_BOX', QgsVertexMarker.ICON_BOX)
+
 # Pixel tolerance for snapping / click detection.
 SNAP_PIXELS = 14
 CLICK_PIXELS = 6
@@ -44,7 +48,7 @@ class GeorefMapTool(QgsMapTool):
 
         # Highlight for the grabbable source node (yellow circle).
         self.hoverMarker = QgsVertexMarker(self.canvas)
-        self.hoverMarker.setIconType(QgsVertexMarker.ICON_CIRCLE)
+        self.hoverMarker.setIconType(QGIS_ICON_CIRCLE)
         self.hoverMarker.setColor(QColor(255, 210, 0))
         self.hoverMarker.setIconSize(16)
         self.hoverMarker.setPenWidth(3)
@@ -52,7 +56,7 @@ class GeorefMapTool(QgsMapTool):
 
         # Highlight for the destination snap (cyan box).
         self.destMarker = QgsVertexMarker(self.canvas)
-        self.destMarker.setIconType(QgsVertexMarker.ICON_BOX)
+        self.destMarker.setIconType(QGIS_ICON_BOX)
         self.destMarker.setColor(QColor(0, 200, 255))
         self.destMarker.setIconSize(16)
         self.destMarker.setPenWidth(3)
