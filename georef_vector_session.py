@@ -182,18 +182,14 @@ class VectorGeorefSession(GeorefSessionBase):
         self._refresh_static()
 
     def _refresh_static(self):
-        '''Show the non-target features statically at their original position
-        (only while the source layer is hidden).
-
-        While the source layer is visible the features themselves are shown, so
-        the static preview is skipped (avoids double drawing).
+        '''Show the non-target features statically at their original position in single-feature mode.
+        
+        Since the source layer is now always visible (not hidden), this method
+        is currently a no-op but is kept for future extensibility.
         '''
+        # Static preview would show non-target features only if the source layer
+        # were hidden. Since we keep the source layer visible, this is empty.
         self.rb_static.reset(self._geom_type)
-        if (self.scope == 'single' and self._locked_fid is not None
-                and self._layer_hidden):
-            for f2, g2 in self._candidates:
-                if f2 != self._locked_fid:
-                    self.rb_static.addGeometry(g2, self.layer)
 
     def _nearest_candidate_fid(self, point):
         '''Return the candidate feature id nearest to point (single mode).'''

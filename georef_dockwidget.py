@@ -34,8 +34,6 @@ from qgis.PyQt.QtWidgets import (
     QSlider,
 )
 
-QtHorizontal = getattr(Qt, 'Horizontal', Qt.Orientation.Horizontal)
-
 from .georef_session_base import DEFAULT_QUALITY, QUALITY, residual_color
 from .georef_vector_session import VectorGeorefSession
 from .georef_raster_session import RasterGeorefSession
@@ -279,7 +277,7 @@ class GeorefDockWidget(QgsDockWidget):
             | QgsMapLayerProxyModel.Filter.RasterLayer)
         form.addRow('Target layer', self.layerCombo)
 
-        self.transparencySlider = QSlider(QtHorizontal)
+        self.transparencySlider = QSlider(Qt.Orientation.Horizontal)
         self.transparencySlider.setMinimum(0)
         self.transparencySlider.setMaximum(100)
         self.transparencySlider.setValue(50)
@@ -431,7 +429,7 @@ class GeorefDockWidget(QgsDockWidget):
         if layer is None:
             self.iface.messageBar().pushMessage(
                 'Freehand Georeferencer', 'Please select a target layer.',
-                level=Qgis.Warning, duration=3)
+                level=Qgis.MessageLevel.Warning, duration=3)
             return
 
         mode, lock = self._current_transform()
@@ -449,7 +447,7 @@ class GeorefDockWidget(QgsDockWidget):
                 self.iface.messageBar().pushMessage(
                     'Freehand Georeferencer',
                     'No selected features. Select features or change the scope.',
-                    level=Qgis.Warning, duration=4)
+                    level=Qgis.MessageLevel.Warning, duration=4)
                 return
             self.session = VectorGeorefSession(
                 self.iface, layer, scope, mode, lock, quality,
@@ -458,7 +456,7 @@ class GeorefDockWidget(QgsDockWidget):
         if self.session.feature_count() == 0:
             self.iface.messageBar().pushMessage(
                 'Freehand Georeferencer', 'Nothing to georeference in the layer.',
-                level=Qgis.Warning, duration=4)
+                level=Qgis.MessageLevel.Warning, duration=4)
             self.session.cleanup()
             self.session = None
             return
@@ -598,7 +596,7 @@ class GeorefDockWidget(QgsDockWidget):
             # Also record the path in the Log Messages panel.
             QgsMessageLog.logMessage(
                 'GCP CSV saved: {}'.format(csv_path),
-                'Freehand Georeferencer', Qgis.Info)
+                'Freehand Georeferencer', Qgis.MessageLevel.Info)
         item = mb.createMessage('Freehand Georeferencer', text)
         if csv_path:
             folder = os.path.dirname(csv_path)
@@ -606,24 +604,24 @@ class GeorefDockWidget(QgsDockWidget):
             btn.clicked.connect(
                 lambda: QDesktopServices.openUrl(QUrl.fromLocalFile(folder)))
             item.layout().addWidget(btn)
-        mb.pushWidget(item, Qgis.Success, 8)
+        mb.pushWidget(item, Qgis.MessageLevel.Success, 8)
 
     def _warn_no_gcp(self):
         self.iface.messageBar().pushMessage(
             'Freehand Georeferencer',
-            'No active control points.', level=Qgis.Warning, duration=3)
+            'No active control points.', level=Qgis.MessageLevel.Warning, duration=3)
 
     def _warn_apply_failed(self):
         self.iface.messageBar().pushMessage(
             'Freehand Georeferencer',
             'Cannot apply: no active control points, or the layer is not '
-            'editable.', level=Qgis.Warning, duration=4)
+            'editable.', level=Qgis.MessageLevel.Warning, duration=4)
 
     def _warn_raster_failed(self):
         self.iface.messageBar().pushMessage(
             'Freehand Georeferencer',
             'Cannot apply: no active control points, or the raster source is '
-            'not a writable GDAL file.', level=Qgis.Warning, duration=4)
+            'not a writable GDAL file.', level=Qgis.MessageLevel.Warning, duration=4)
 
     def _on_save(self):
         # Use the running session, or the most recent stopped session if none.
@@ -639,7 +637,7 @@ class GeorefDockWidget(QgsDockWidget):
         sess.save_gcps(path)
         self.iface.messageBar().pushMessage(
             'Freehand Georeferencer', 'GCPs saved.',
-            level=Qgis.Success, duration=3)
+            level=Qgis.MessageLevel.Success, duration=3)
 
     def _on_load(self):
         if not self.session:
@@ -652,11 +650,11 @@ class GeorefDockWidget(QgsDockWidget):
         if n == 0:
             self.iface.messageBar().pushMessage(
                 'Freehand Georeferencer',
-                'No GCPs found in the file.', level=Qgis.Warning, duration=3)
+                'No GCPs found in the file.', level=Qgis.MessageLevel.Warning, duration=3)
         else:
             self.iface.messageBar().pushMessage(
                 'Freehand Georeferencer',
-                'Loaded {} GCPs.'.format(n), level=Qgis.Success, duration=3)
+                'Loaded {} GCPs.'.format(n), level=Qgis.MessageLevel.Success, duration=3)
 
     def _on_item_changed(self, item):
         if self._syncing or not self.session or item.column() != 0:

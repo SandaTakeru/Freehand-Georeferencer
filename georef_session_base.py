@@ -16,6 +16,7 @@ from qgis.core import (
     Qgis,
     QgsFeatureRequest,
     QgsGeometry,
+    QgsMessageLog,
     QgsPointXY,
     QgsProject,
     QgsRectangle,
@@ -86,6 +87,24 @@ class Gcp(object):
 class GeorefSessionBase(object):
     '''Data-type agnostic base for a georeferencing session.'''
 
+    @staticmethod
+    def _safe_layer_id(layer):
+        if layer is None:
+            return None
+        try:
+            return layer.id()
+        except (AttributeError, ReferenceError, RuntimeError):
+            return None
+
+    def is_valid(self):
+        '''True while this session still points to a live underlying layer.'''
+        return self._safe_layer_id(self.layer) is not None
+
+    def _layer_ref(self):
+        if not self.is_valid():
+            return None
+        return self.layer
+
     def __init__(self, iface, layer, mode, lock_scale, quality, on_update):
         self.iface = iface
         self.canvas = iface.mapCanvas()
@@ -100,8 +119,6 @@ class GeorefSessionBase(object):
         self._draw_matrix = transform._identity()  # matrix actually drawn (provisional while dragging)
         self._dragging = False        # render a lighter preview while dragging
 
-        self._layer_was_visible = True
-        self._layer_hidden = False
         self._last_snap_fid = None    # feature id of the node last grabbed by snap_source
 
         # Residual vectors (transformed src -> dst).
@@ -184,8 +201,13 @@ class GeorefSessionBase(object):
     # ------------------------------------------------------------------
     # GCP operations
     # ------------------------------------------------------------------
-    def add_gcp(self, src, dst):
-        # In single-feature mode (vector), confirm the target from the first source.
+    def add_gcp(self, src: tuple[float, float], dst: tuple[float, float]) -> None:
+        '''Add a new control point.
+        
+        Args:
+            src: Source (original) coordinate (x, y).
+            dst: Destination (target) coordinate (x, y).
+        '''
         self._ensure_single_locked(src)
         self.gcps.append(Gcp(src, dst))
         # On the first point, hide the source layer and switch to the preview.
@@ -193,12 +215,23 @@ class GeorefSessionBase(object):
             self._hide_source_layer()
         self.recompute()
 
-    def toggle_gcp(self, idx):
+    def toggle_gcp(self, idx: int) -> None:
+        '''Toggle the active state of a GCP.
+        
+        Args:
+            idx: Index of the GCP to toggle.
+        '''
         if 0 <= idx < len(self.gcps):
             self.gcps[idx].active = not self.gcps[idx].active
             self.recompute()
 
-    def set_active(self, idx, active):
+    def set_active(self, idx: int, active: bool) -> None:
+        '''Set the active state of a GCP.
+        
+        Args:
+            idx: Index of the GCP.
+            active: Whether the GCP should be active.
+        '''
         if 0 <= idx < len(self.gcps):
             self.gcps[idx].active = active
             self.recompute()
@@ -407,24 +440,40 @@ class GeorefSessionBase(object):
         the same CRS are considered; a rect filter scans only nearby features.
         None if nothing is found.
         '''
+        if self.layer is None:
+            return None
+
+        try:
+            layer_crs = self.layer.crs()
+        except (AttributeError, ReferenceError, RuntimeError):
+            return None
+
         rect = QgsRectangle(
             map_point.x() - tol_map, map_point.y() - tol_map,
             map_point.x() + tol_map, map_point.y() + tol_map)
         layers = list(self.canvas.layers())
-        if include_self and isinstance(self.layer, QgsVectorLayer) \
-                and self.layer not in layers:
+        if include_self and isinstance(self.layer, QgsVectorLayer) and self.layer not in layers:
             layers.append(self.layer)
 
         best = None
         best_d = tol_map
         seen = set()
         for lyr in layers:
-            if not isinstance(lyr, QgsVectorLayer) or lyr.id() in seen:
+            if lyr is None:
                 continue
-            seen.add(lyr.id())
-            if not include_self and lyr.id() == self.layer.id():
+            try:
+                lyr_id = lyr.id()
+            except (AttributeError, ReferenceError, RuntimeError):
                 continue
-            if lyr.crs() != self.layer.crs():
+            if not isinstance(lyr, QgsVectorLayer) or lyr_id in seen:
+                continue
+            seen.add(lyr_id)
+            try:
+                if not include_self and lyr_id == self.layer.id():
+                    continue
+                if lyr.crs() != layer_crs:
+                    continue
+            except (AttributeError, ReferenceError, RuntimeError):
                 continue
             req = QgsFeatureRequest().setFilterRect(rect).setNoAttributes()
             for f in lyr.getFeatures(req):
@@ -478,29 +527,44 @@ class GeorefSessionBase(object):
     # Source layer visibility control
     # ------------------------------------------------------------------
     def _hide_source_layer(self):
-        node = QgsProject.instance().layerTreeRoot().findLayer(self.layer.id())
+        '''Prepare for preview by ensuring the source layer is ready.
+
+        The source layer visibility is now kept unchanged (not hidden) to show
+        both original features and the preview overlay together.
+        '''
+        if not self.is_valid():
+            return
+        try:
+            node = QgsProject.instance().layerTreeRoot().findLayer(self.layer.id())
+        except (AttributeError, ReferenceError, RuntimeError):
+            return
         if node:
             self._layer_was_visible = node.itemVisibilityChecked()
-            node.setItemVisibilityChecked(False)
-        self._layer_hidden = True
         self._refresh_static()
-        # Re-render the map so the hidden layer disappears (the preview overlay
-        # is a scene item and survives the refresh).
         self.canvas.refresh()
 
     def _restore_source_layer(self):
-        node = QgsProject.instance().layerTreeRoot().findLayer(self.layer.id())
-        if node:
-            node.setItemVisibilityChecked(self._layer_was_visible)
-        self._layer_hidden = False
+        '''Restore the source layer state after georeferencing completes.
+
+        No-op for layer-tree visibility since we never hide the source layer.
+        Keep internal state consistent and refresh overlays.
+        '''
+        if not self.is_valid():
+            self._refresh_static()
+            self.canvas.refresh()
+            return
         self._refresh_static()
         self.canvas.refresh()
 
     # ------------------------------------------------------------------
     # GCP file I/O
     # ------------------------------------------------------------------
-    def save_gcps(self, path):
-        '''Save the GCPs and residual info to CSV.'''
+    def save_gcps(self, path: str) -> None:
+        '''Save the GCPs and residual info to CSV.
+        
+        Args:
+            path: File path to write the CSV to.
+        '''
         stats = self._stats()
         per_point = stats['per_point']
         active_idx = [i for i, g in enumerate(self.gcps) if g.active]
@@ -522,7 +586,7 @@ class GeorefSessionBase(object):
             w.writerow(['# RMS', stats['rms'], 'STD', stats['std']])
             w.writerow(['# scale', overall, 'scaleX', sx, 'scaleY', sy])
 
-    def load_gcps(self, path):
+    def load_gcps(self, path: str) -> int:
         '''Load and reproduce GCPs from CSV (to reuse the same transform on
         another layer).
 
@@ -531,19 +595,26 @@ class GeorefSessionBase(object):
         Returns the number of points loaded.
         '''
         loaded = []
-        with open(path, newline='', encoding='utf-8') as fp:
-            for row in csv.reader(fp):
-                if not row or row[0].strip().startswith('#'):
-                    continue
-                if row[0].strip() == 'index':
-                    continue
-                try:
-                    active = bool(int(row[1]))
-                    sx, sy = float(row[2]), float(row[3])
-                    dx, dy = float(row[4]), float(row[5])
-                except (ValueError, IndexError):
-                    continue
-                loaded.append(((sx, sy), (dx, dy), active))
+        try:
+            with open(path, newline='', encoding='utf-8') as fp:
+                for row in csv.reader(fp):
+                    if not row or row[0].strip().startswith('#'):
+                        continue
+                    if row[0].strip() == 'index':
+                        continue
+                    try:
+                        active = bool(int(row[1]))
+                        sx, sy = float(row[2]), float(row[3])
+                        dx, dy = float(row[4]), float(row[5])
+                    except (ValueError, IndexError):
+                        continue
+                    loaded.append(((sx, sy), (dx, dy), active))
+        except (OSError, IOError) as e:
+            QgsMessageLog.logMessage(
+                'Error reading GCP file: {}'.format(str(e)),
+                'Freehand Georeferencer', Qgis.MessageLevel.Warning)
+            return 0
+
         if not loaded:
             return 0
 

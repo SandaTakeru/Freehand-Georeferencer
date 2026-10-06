@@ -67,6 +67,8 @@ class GeorefMapTool(QgsMapTool):
 
         Returns: (QgsPointXY, snapped: bool)
         '''
+        if not self.session or not self.session.is_valid():
+            return self.toMapCoordinates(screen_pos), False
         cur = self.toMapCoordinates(screen_pos)
         snap = self.session.snap_dest(cur, self._tol_map(SNAP_PIXELS))
         if snap is not None:
@@ -74,7 +76,7 @@ class GeorefMapTool(QgsMapTool):
         return cur, False
 
     def canvasPressEvent(self, e):
-        if not self.session:
+        if not self.session or not self.session.is_valid():
             return
         self._press_screen = e.pos()
         map_pt = self.toMapCoordinates(e.pos())
@@ -108,7 +110,7 @@ class GeorefMapTool(QgsMapTool):
             self.hoverMarker.show()
 
     def canvasMoveEvent(self, e):
-        if not self.session:
+        if not self.session or not self.session.is_valid():
             return
 
         if self._press_gcp is not None:
@@ -156,11 +158,13 @@ class GeorefMapTool(QgsMapTool):
                     self.hoverMarker.hide()
 
     def canvasReleaseEvent(self, e):
+        if not self.session or not self.session.is_valid():
+            self._reset_pending()
+            return
         self.rb_drag.reset(Qgis.GeometryType.Line)
         self.destMarker.hide()
-        if self.session:
-            self.session.clear_drag_preview()
-        if not self.session or self._press_screen is None:
+        self.session.clear_drag_preview()
+        if self._press_screen is None:
             self._reset_pending()
             return
 
