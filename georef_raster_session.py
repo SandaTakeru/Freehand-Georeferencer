@@ -13,8 +13,10 @@ import tempfile
 import time
 
 from qgis.core import (
+    Qgis,
     QgsMapRendererSequentialJob,
     QgsMapSettings,
+    QgsMessageLog,
     QgsPointXY,
     QgsProject,
     QgsRasterLayer,
@@ -287,83 +289,90 @@ class RasterGeorefSession(GeorefSessionBase):
         except ImportError:
             return None
 
-        ds = gdal.Open(path)
-        if ds is None:
-            return None
-        # Use the source dataset's genuine GDAL geotransform only when it is an
-        # actual georeferenced raster/VRT (including the north-up VRT output from
-        # a previous pass). A plain unreferenced image usually has a synthetic
-        # default geotransform with a positive Y pixel size, which would cause
-        # the output to appear upside-down. In that case, fall back to the layer's
-        # currently displayed north-up extent, which matches the preview math.
-        gt = ds.GetGeoTransform()
-        is_vrt = bool(ds.GetDriver() and ds.GetDriver().ShortName.lower() == 'vrt')
-        is_valid_gt = (
-            gt is not None and len(gt) == 6 and gt[5] < 0
-        )
-        if is_vrt and gt is not None:
-            g = gt
-        elif is_valid_gt:
-            g = gt
-        else:
-            cols = self.layer.width()
-            rows = self.layer.height()
-            if cols <= 0 or rows <= 0:
+        try:
+            ds = gdal.Open(path)
+            if ds is None:
+                return None
+            # Use the source dataset's genuine GDAL geotransform only when it is an
+            # actual georeferenced raster/VRT (including the north-up VRT output from
+            # a previous pass). A plain unreferenced image usually has a synthetic
+            # default geotransform with a positive Y pixel size, which would cause
+            # the output to appear upside-down. In that case, fall back to the layer's
+            # currently displayed north-up extent, which matches the preview math.
+            gt = ds.GetGeoTransform()
+            is_vrt = bool(ds.GetDriver() and ds.GetDriver().ShortName.lower() == 'vrt')
+            is_valid_gt = (
+                gt is not None and len(gt) == 6 and gt[5] < 0
+            )
+            if is_vrt and gt is not None:
+                g = gt
+            elif is_valid_gt:
+                g = gt
+            else:
+                cols = self.layer.width()
+                rows = self.layer.height()
+                if cols <= 0 or rows <= 0:
+                    ds = None
+                    return None
+                ext = self.layer.extent()
+                g = (
+                    ext.xMinimum(), ext.width() / cols, 0.0,
+                    ext.yMaximum(), 0.0, -ext.height() / rows,
+                )
+            if g is None:
+                return None
+            # Compose M (world->world') with the base pixel->world transform. This
+            # keeps both the current preview space and any already-applied VRT
+            # georeferencing consistent.
+            m = self.matrix
+            m00, m01, m02 = float(m[0, 0]), float(m[0, 1]), float(m[0, 2])
+            m10, m11, m12 = float(m[1, 0]), float(m[1, 1]), float(m[1, 2])
+            new_gt = (
+                m00 * g[0] + m01 * g[3] + m02,
+                m00 * g[1] + m01 * g[4],
+                m00 * g[2] + m01 * g[5],
+                m10 * g[0] + m11 * g[3] + m12,
+                m10 * g[1] + m11 * g[4],
+                m10 * g[2] + m11 * g[5],
+            )
+
+            out_path = self._output_path(path)
+            vrt = gdal.GetDriverByName('VRT').CreateCopy(out_path, ds)
+            if vrt is None:
                 ds = None
                 return None
-            ext = self.layer.extent()
-            g = (
-                ext.xMinimum(), ext.width() / cols, 0.0,
-                ext.yMaximum(), 0.0, -ext.height() / rows,
-            )
-        if g is None:
-            return None
-        # Compose M (world->world') with the base pixel->world transform. This
-        # keeps both the current preview space and any already-applied VRT
-        # georeferencing consistent.
-        m = self.matrix
-        m00, m01, m02 = float(m[0, 0]), float(m[0, 1]), float(m[0, 2])
-        m10, m11, m12 = float(m[1, 0]), float(m[1, 1]), float(m[1, 2])
-        new_gt = (
-            m00 * g[0] + m01 * g[3] + m02,
-            m00 * g[1] + m01 * g[4],
-            m00 * g[2] + m01 * g[5],
-            m10 * g[0] + m11 * g[3] + m12,
-            m10 * g[1] + m11 * g[4],
-            m10 * g[2] + m11 * g[5],
-        )
-
-        out_path = self._output_path(path)
-        vrt = gdal.GetDriverByName('VRT').CreateCopy(out_path, ds)
-        if vrt is None:
+            vrt.SetGeoTransform(new_gt)
+            # Write the CRS so the output is self-describing (avoids the "CRS was
+            # undefined" warning). Use the layer CRS, or the project CRS if the
+            # source raster has none (the georeferencing is done in that CRS).
+            crs = self.layer.crs()
+            if not crs.isValid():
+                crs = QgsProject.instance().crs()
+            if crs.isValid():
+                vrt.SetProjection(crs.toWkt())
+            vrt.FlushCache()
+            vrt = None
             ds = None
-            return None
-        vrt.SetGeoTransform(new_gt)
-        # Write the CRS so the output is self-describing (avoids the "CRS was
-        # undefined" warning). Use the layer CRS, or the project CRS if the
-        # source raster has none (the georeferencing is done in that CRS).
-        crs = self.layer.crs()
-        if not crs.isValid():
-            crs = QgsProject.instance().crs()
-        if crs.isValid():
-            vrt.SetProjection(crs.toWkt())
-        vrt.FlushCache()
-        vrt = None
-        ds = None
 
-        out_name = os.path.splitext(os.path.basename(out_path))[0]
-        rl = QgsRasterLayer(out_path, out_name)
-        if not rl.isValid():
+            out_name = os.path.splitext(os.path.basename(out_path))[0]
+            rl = QgsRasterLayer(out_path, out_name)
+            if not rl.isValid():
+                return None
+            stats = self._stats()
+            overall, sx, sy = self.scale_factors()
+            rl.setCustomProperty('fvg/mode', self.mode)
+            rl.setCustomProperty('fvg/lock_scale', str(self.lock_scale))
+            rl.setCustomProperty('fvg/gcp_count', str(len(self.active_gcps())))
+            rl.setCustomProperty('fvg/rms', '{:.6f}'.format(stats['rms']))
+            rl.setCustomProperty('fvg/scale', '{:.6f}'.format(overall))
+            QgsProject.instance().addMapLayer(rl)
+            return rl
+        except (OSError, RuntimeError, ValueError) as e:
+            # Log any unexpected errors during GDAL operations
+            QgsMessageLog.logMessage(
+                'Raster georeferencing error: {}'.format(str(e)),
+                'Freehand Georeferencer', Qgis.MessageLevel.Warning)
             return None
-        stats = self._stats()
-        overall, sx, sy = self.scale_factors()
-        rl.setCustomProperty('fvg/mode', self.mode)
-        rl.setCustomProperty('fvg/lock_scale', str(self.lock_scale))
-        rl.setCustomProperty('fvg/gcp_count', str(len(self.active_gcps())))
-        rl.setCustomProperty('fvg/rms', '{:.6f}'.format(stats['rms']))
-        rl.setCustomProperty('fvg/scale', '{:.6f}'.format(overall))
-        QgsProject.instance().addMapLayer(rl)
-        return rl
 
     def _output_path(self, src_path):
         '''Build the output VRT path beside the source, or in temp if not writable.'''

@@ -21,10 +21,6 @@ from qgis.core import Qgis, QgsPointXY
 from qgis.gui import QgsMapTool, QgsRubberBand, QgsVertexMarker
 from qgis.PyQt.QtGui import QColor
 
-QGIS_VERTEX_MARKER_ICON_TYPE = getattr(QgsVertexMarker, 'IconType', QgsVertexMarker)
-QGIS_ICON_CIRCLE = getattr(QGIS_VERTEX_MARKER_ICON_TYPE, 'ICON_CIRCLE', QgsVertexMarker.ICON_CIRCLE)
-QGIS_ICON_BOX = getattr(QGIS_VERTEX_MARKER_ICON_TYPE, 'ICON_BOX', QgsVertexMarker.ICON_BOX)
-
 # Pixel tolerance for snapping / click detection.
 SNAP_PIXELS = 14
 CLICK_PIXELS = 6
@@ -48,7 +44,7 @@ class GeorefMapTool(QgsMapTool):
 
         # Highlight for the grabbable source node (yellow circle).
         self.hoverMarker = QgsVertexMarker(self.canvas)
-        self.hoverMarker.setIconType(QGIS_ICON_CIRCLE)
+        self.hoverMarker.setIconType(QgsVertexMarker.ICON_CIRCLE)
         self.hoverMarker.setColor(QColor(255, 210, 0))
         self.hoverMarker.setIconSize(16)
         self.hoverMarker.setPenWidth(3)
@@ -56,7 +52,7 @@ class GeorefMapTool(QgsMapTool):
 
         # Highlight for the destination snap (cyan box).
         self.destMarker = QgsVertexMarker(self.canvas)
-        self.destMarker.setIconType(QGIS_ICON_BOX)
+        self.destMarker.setIconType(QgsVertexMarker.ICON_BOX)
         self.destMarker.setColor(QColor(0, 200, 255))
         self.destMarker.setIconSize(16)
         self.destMarker.setPenWidth(3)
@@ -71,6 +67,8 @@ class GeorefMapTool(QgsMapTool):
 
         Returns: (QgsPointXY, snapped: bool)
         '''
+        if not self.session or not self.session.is_valid():
+            return self.toMapCoordinates(screen_pos), False
         cur = self.toMapCoordinates(screen_pos)
         snap = self.session.snap_dest(cur, self._tol_map(SNAP_PIXELS))
         if snap is not None:
@@ -78,7 +76,7 @@ class GeorefMapTool(QgsMapTool):
         return cur, False
 
     def canvasPressEvent(self, e):
-        if not self.session:
+        if not self.session or not self.session.is_valid():
             return
         self._press_screen = e.pos()
         map_pt = self.toMapCoordinates(e.pos())
@@ -112,7 +110,7 @@ class GeorefMapTool(QgsMapTool):
             self.hoverMarker.show()
 
     def canvasMoveEvent(self, e):
-        if not self.session:
+        if not self.session or not self.session.is_valid():
             return
 
         if self._press_gcp is not None:
@@ -160,11 +158,13 @@ class GeorefMapTool(QgsMapTool):
                     self.hoverMarker.hide()
 
     def canvasReleaseEvent(self, e):
+        if not self.session or not self.session.is_valid():
+            self._reset_pending()
+            return
         self.rb_drag.reset(Qgis.GeometryType.Line)
         self.destMarker.hide()
-        if self.session:
-            self.session.clear_drag_preview()
-        if not self.session or self._press_screen is None:
+        self.session.clear_drag_preview()
+        if self._press_screen is None:
             self._reset_pending()
             return
 

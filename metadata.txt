@@ -2,10 +2,10 @@
 
 [general]
 name=Freehand Georeferencer
-qgisMinimumVersion=3.0
+qgisMinimumVersion=4.0
 qgisMaximumVersion=4.99
 description=An intuitive georeferencing (coordinate-correction) tool for vector and raster layers. Grab a point and release it at the new position to add control points, preview the Helmert/Affine transform in real time, and apply the result.
-version=20260913.2
+version=20261007.1
 author=Sanda Takeru
 email=location.lab@sanda-takeru.com
 license=GPL-3.0
@@ -19,7 +19,15 @@ repository=https://github.com/SandaTakeru/Freehand-Georeferencer
 # Recommended items:
 
 hasProcessingProvider=no
-changelog=20260913
+changelog=20261007
+  - Fixed stale-layer lifetime issues caused by deleted QgsVectorLayer/QgsRasterLayer objects remaining referenced by active sessions or map tools; canvas interaction now ignores invalid layers safely instead of crashing with wrapped C/C++ object errors.
+  - Hardened session/map-tool lifecycle checks around layer deletion and active preview updates for safer QGIS 4 behavior.
+  - Code quality improvements: removed QGIS 3.x compatibility layer for exclusive QGIS 4.0+ support.
+  - Removed obsolete internal flag (_layer_hidden) that was always false; simplified source layer state management.
+  - Enhanced error handling: added try-except blocks for GDAL raster operations and CSV GCP file I/O with logging via QgsMessageLog.
+  - Added type hints to core georeferencing methods (add_gcp, toggle_gcp, set_active, save_gcps, load_gcps) for improved IDE support and code clarity.
+  - Improved docstrings with method arguments and return value documentation.
+    20260913
   - Keep source vector features visible during live preview; preview overlays are drawn on top (do not auto-hide source layer).
   - Added QGIS 3.x / QGIS 4.x compatibility aliases for message-level and vertex-marker enums so the same plugin code runs on both series without source changes.
   - Added explicit plugin compatibility metadata so QGIS does not incorrectly treat the plugin as valid only up to 3.99.

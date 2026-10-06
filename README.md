@@ -12,11 +12,6 @@ This plugin is the successor to the older Freehand Vector Georeferencer workflow
 
 The animation above plays automatically. For the full-quality version, see the [demo video (MP4)](media/demo.mp4).
 
-
-![Demo2](media/demo2.gif)
-
-The animation above plays automatically. For the full-quality version, see the [demo video (MP4)](media/demo2.mp4).
-
 ## Features
 
 - Vector target layers
@@ -83,3 +78,10 @@ It is derived from work originally licensed under GPL v2 or later, and is distri
 - Project homepage: https://note.com/sandatakeru/n/n654543a913d8
 - Repository: https://github.com/SandaTakeru/Freehand-Georeferencer
 - Issue tracker: https://github.com/SandaTakeru/Freehand-Georeferencer
+
+## Recent updates
+
+- QGIS 4-only cleanup and source simplification
+- More robust lifecycle handling for layers that are deleted while an active session or map tool still exists
+- Added safer logging and error handling for raster and CSV operations
+- Improved type hints and inline documentation for key georeferencing methods
